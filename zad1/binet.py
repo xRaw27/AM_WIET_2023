@@ -29,20 +29,19 @@ def binet_with_count(A: np.ndarray, B: np.ndarray):
     A11, A12, A21, A22 = split_matrix(A)
     B11, B12, B21, B22 = split_matrix(B)
 
-    C11a, count11a = binet_with_count(A11, B11)
-    C11b, count11b = binet_with_count(A12, B21)
-    C12a, count12a = binet_with_count(A11, B12)
-    C12b, count12b = binet_with_count(A12, B22)
-    C21a, count21a = binet_with_count(A21, B11)
-    C21b, count21b = binet_with_count(A22, B21)
-    C22a, count22a = binet_with_count(A21, B12)
-    C22b, count22b = binet_with_count(A22, B22)
+    C11a, count1a = binet_with_count(A11, B11)
+    C11b, count1b = binet_with_count(A12, B21)
+    C12a, count2a = binet_with_count(A11, B12)
+    C12b, count2b = binet_with_count(A12, B22)
+    C21a, count3a = binet_with_count(A21, B11)
+    C21b, count3b = binet_with_count(A22, B21)
+    C22a, count4a = binet_with_count(A21, B12)
+    C22b, count4b = binet_with_count(A22, B22)
     C1 = C11a + C11b
     C2 = C12a + C12b
     C3 = C21a + C21b
     C4 = C22a + C22b
 
-    count = count11a + count11b + count12a + count12b \
-            + count21a + count21b + count22a + count22b + 4 * math.prod(A.shape)
+    count = count1a + count1b + count2a + count2b + count3a + count3b + count4a + count4b + 4 * math.prod(A.shape)
 
     return np.vstack((np.hstack((C1, C2)), np.hstack((C3, C4)))), count
