@@ -42,6 +42,16 @@ def binet_with_count(A: np.ndarray, B: np.ndarray):
     C3 = C21a + C21b
     C4 = C22a + C22b
 
-    count = count1a + count1b + count2a + count2b + count3a + count3b + count4a + count4b + 4 * math.prod(A.shape)
+    count = (
+        count1a
+        + count1b
+        + count2a
+        + count2b
+        + count3a
+        + count3b
+        + count4a
+        + count4b
+        + 4 * math.prod(A.shape)
+    )
 
     return np.vstack((np.hstack((C1, C2)), np.hstack((C3, C4)))), count

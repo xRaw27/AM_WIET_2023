@@ -1,0 +1,229 @@
+//// main.py ////
+
+from strassen import strassen, strassen_with_count
+from binet import binet, binet_with_count
+import numpy as np
+import matplotlib.pyplot as plt
+from time import perf_counter_ns
+from scipy.optimize import curve_fit
+
+
+def test_for_random_2_to_power_k(k, f, with_count=False):
+    print(f'Test for random 2^k x 2^k matrix\nk = {k}')
+
+    n = 2 ** k
+    A = np.random.rand(n, n)
+    B = np.random.rand(n, n)
+    print(f'A:\n{A}\n')
+    print(f'B:\n{B}\n')
+
+    if with_count:
+        C, count = f(A, B)
+        print(f'Atomic operations count: {count}\n')
+        print(f'C:\n{C}')
+        return count
+    else:
+        start = perf_counter_ns()
+        C = f(A, B)
+        print(f'C:\n{C}')
+        return perf_counter_ns() - start
+
+
+def func(x, a, n):
+    return a * x ** n
+
+
+def plot(max_k):
+    x = np.arange(1, max_k + 1)
+    y1_binet = [test_for_random_2_to_power_k(k, binet) for k in x]
+    y1_strassen = [test_for_random_2_to_power_k(k, strassen) for k in x]
+    y2_binet = [test_for_random_2_to_power_k(k, binet_with_count, with_count=True) for k in x]
+    y2_strassen = [test_for_random_2_to_power_k(k, strassen_with_count, with_count=True) for k in x]
+
+    fig, ax = plt.subplots(figsize=(16, 9), dpi=100)
+    ax.plot(x, y1_binet, 'o', label="Algorytm Bineta")
+    ax.plot(x, y1_strassen, 'o', label="Algorytm Strassena")
+    ax.set_title("Pomiar czasu dla macierzy 2^k x 2^k")
+    ax.set_xlabel("k")
+    ax.set_ylabel("Czas [ns]")
+    ax.set_xticks(x, x)
+    ax.legend()
+    plt.grid()
+    plt.show()
+
+    fig, ax = plt.subplots(figsize=(16, 9), dpi=100)
+    ax.plot(x, y2_binet, 'o', label="Algorytm Bineta")
+    ax.plot(x, y2_strassen, 'o', label="Algorytm Strassena")
+    ax.set_title("Pomiar liczby operacji zmienno-przecinkowych dla macierzy 2^k x 2^k")
+    ax.set_xlabel("k")
+    ax.set_ylabel("Liczba operacji zmienno-przecinkowych")
+    ax.set_xticks(x, x)
+    ax.legend()
+    plt.grid()
+    plt.show()
+
+    popt_binet, pcov_binet = curve_fit(func, 2 ** x, y2_binet)
+    a_binet, n_binet = popt_binet
+    popt_strassen, pcov_strassen = curve_fit(func, 2 ** x, y2_strassen)
+    a_strassen, n_strassen = popt_strassen
+    x2 = np.linspace(0, max_k)
+
+    fig, ax = plt.subplots(figsize=(16, 9), dpi=100)
+    ax.plot(x, y2_binet, 'o', label="Algorytm Bineta - Zmierzona liczba operacji zmienno-przecinkowych")
+    ax.plot(x, y2_strassen, 'o', label="Algorytm Strassena - Zmierzona liczba operacji zmienno-przecinkowych")
+    ax.plot(
+        x2, func(2 ** x2, a_binet, n_binet),
+        label=f'Algorytm Bineta - Dopasowana krzywa: {round(a_binet, 3)} * x^{round(n_binet, 3)}'
+    )
+    ax.plot(
+        x2, func(2 ** x2, a_strassen, n_strassen),
+        label=f'Algorytm Strassena - Dopasowana krzywa: {round(a_strassen, 3)} * x^{round(n_strassen, 3)}'
+    )
+    ax.set_title("Ocena złożoności poprzez dopasowanie krzywej do wykresu liczby operacji zmienno-przecinkowych")
+    ax.set_xlabel("k")
+    ax.set_ylabel("Liczba operacji zmienno-przecinkowych")
+    ax.set_xticks(x, x)
+    ax.legend()
+    plt.grid()
+    plt.show()
+
+
+if __name__ == '__main__':
+    plot(9)
+
+
+
+
+//// binet.py ////
+
+import numpy as np
+import math
+
+
+def split_matrix(M: np.ndarray):
+    n = M.shape[0] // 2
+    return M[:n, :n], M[:n, n:], M[n:, :n], M[n:, n:]
+
+
+def binet(A: np.ndarray, B: np.ndarray):
+    if A.shape == (1, 1):
+        return A * B
+
+    A11, A12, A21, A22 = split_matrix(A)
+    B11, B12, B21, B22 = split_matrix(B)
+
+    C1 = binet(A11, B11) + binet(A12, B21)
+    C2 = binet(A11, B12) + binet(A12, B22)
+    C3 = binet(A21, B11) + binet(A22, B21)
+    C4 = binet(A21, B12) + binet(A22, B22)
+
+    return np.vstack((np.hstack((C1, C2)), np.hstack((C3, C4))))
+
+
+def binet_with_count(A: np.ndarray, B: np.ndarray):
+    if A.shape == (1, 1):
+        return A * B, 1
+
+    A11, A12, A21, A22 = split_matrix(A)
+    B11, B12, B21, B22 = split_matrix(B)
+
+    C11a, count1a = binet_with_count(A11, B11)
+    C11b, count1b = binet_with_count(A12, B21)
+    C12a, count2a = binet_with_count(A11, B12)
+    C12b, count2b = binet_with_count(A12, B22)
+    C21a, count3a = binet_with_count(A21, B11)
+    C21b, count3b = binet_with_count(A22, B21)
+    C22a, count4a = binet_with_count(A21, B12)
+    C22b, count4b = binet_with_count(A22, B22)
+    C1 = C11a + C11b
+    C2 = C12a + C12b
+    C3 = C21a + C21b
+    C4 = C22a + C22b
+
+    count = (
+        count1a
+        + count1b
+        + count2a
+        + count2b
+        + count3a
+        + count3b
+        + count4a
+        + count4b
+        + 4 * math.prod(A.shape)
+    )
+
+    return np.vstack((np.hstack((C1, C2)), np.hstack((C3, C4)))), count
+
+
+
+
+
+//// strassen.py ////
+
+import numpy as np
+import math
+
+
+def split_matrix(M: np.ndarray):
+    n = M.shape[0] // 2
+    return M[:n, :n], M[:n, n:], M[n:, :n], M[n:, n:]
+
+
+def strassen(A: np.ndarray, B: np.ndarray):
+    if A.shape == (1, 1):
+        return A * B
+
+    A11, A12, A21, A22 = split_matrix(A)
+    B11, B12, B21, B22 = split_matrix(B)
+
+    M1 = strassen(A11 + A22, B11 + B22)
+    M2 = strassen(A21 + A22, B11)
+    M3 = strassen(A11, B12 - B22)
+    M4 = strassen(A22, B21 - B11)
+    M5 = strassen(A11 + A12, B22)
+    M6 = strassen(A21 - A11, B11 + B12)
+    M7 = strassen(A12 - A22, B21 + B22)
+
+    return np.vstack(
+        (
+            np.hstack((M1 + M4 - M5 + M7, M3 + M5)),
+            np.hstack((M2 + M4, M1 - M2 + M3 + M6)),
+        )
+    )
+
+
+def strassen_with_count(A: np.ndarray, B: np.ndarray):
+    if A.shape == (1, 1):
+        return A * B, 1
+
+    A11, A12, A21, A22 = split_matrix(A)
+    B11, B12, B21, B22 = split_matrix(B)
+
+    M1, count1 = strassen_with_count(A11 + A22, B11 + B22)
+    M2, count2 = strassen_with_count(A21 + A22, B11)
+    M3, count3 = strassen_with_count(A11, B12 - B22)
+    M4, count4 = strassen_with_count(A22, B21 - B11)
+    M5, count5 = strassen_with_count(A11 + A12, B22)
+    M6, count6 = strassen_with_count(A21 - A11, B11 + B12)
+    M7, count7 = strassen_with_count(A12 - A22, B21 + B22)
+
+    count = (
+        count1
+        + count2
+        + count3
+        + count4
+        + count5
+        + count6
+        + count7
+        + 18 * math.prod(A.shape)
+    )
+
+    return (
+        np.vstack(
+            (
+                np.hstack((M1 + M4 - M5 + M7, M3 + M5)),
+                np.hstack((M2 + M4, M1 - M2 + M3 + M6)),
+            )
+        ),
+        count,
+    )

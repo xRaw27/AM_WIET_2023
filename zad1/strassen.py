@@ -22,7 +22,12 @@ def strassen(A: np.ndarray, B: np.ndarray):
     M6 = strassen(A21 - A11, B11 + B12)
     M7 = strassen(A12 - A22, B21 + B22)
 
-    return np.vstack((np.hstack((M1 + M4 - M5 + M7, M3 + M5)), np.hstack((M2 + M4, M1 - M2 + M3 + M6))))
+    return np.vstack(
+        (
+            np.hstack((M1 + M4 - M5 + M7, M3 + M5)),
+            np.hstack((M2 + M4, M1 - M2 + M3 + M6)),
+        )
+    )
 
 
 def strassen_with_count(A: np.ndarray, B: np.ndarray):
@@ -40,6 +45,23 @@ def strassen_with_count(A: np.ndarray, B: np.ndarray):
     M6, count6 = strassen_with_count(A21 - A11, B11 + B12)
     M7, count7 = strassen_with_count(A12 - A22, B21 + B22)
 
-    count = count1 + count2 + count3 + count4 + count5 + count6 + count7 + 18 * math.prod(A.shape)
+    count = (
+        count1
+        + count2
+        + count3
+        + count4
+        + count5
+        + count6
+        + count7
+        + 18 * math.prod(A.shape)
+    )
 
-    return np.vstack((np.hstack((M1 + M4 - M5 + M7, M3 + M5)), np.hstack((M2 + M4, M1 - M2 + M3 + M6)))), count
+    return (
+        np.vstack(
+            (
+                np.hstack((M1 + M4 - M5 + M7, M3 + M5)),
+                np.hstack((M2 + M4, M1 - M2 + M3 + M6)),
+            )
+        ),
+        count,
+    )
