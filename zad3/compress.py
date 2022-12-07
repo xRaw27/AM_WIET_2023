@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.sparse.linalg import svds
 from scipy.sparse import random as random_sparse
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 
 
 class Node:
@@ -26,6 +28,30 @@ class Node:
             print(pre, self.n, self.m, "split")
             for node in self.children:
                 node.print_matrix(pre + "  ")
+
+    def __get_matrix_to_draw(self):
+        if self.rank is not None:
+            if self.rank > 0:
+                m = np.zeros((self.n, self.m))
+                m[:, :self.rank] = 1
+                m[:self.rank, :] = 1
+                return m
+            else:
+                return np.zeros((self.n, self.m))
+        elif self.matrix is not None:
+            return np.ones((self.n, self.m))
+        else:
+            return np.vstack(
+                (
+                    np.hstack((self.children[0].__get_matrix_to_draw(), self.children[1].__get_matrix_to_draw())),
+                    np.hstack((self.children[2].__get_matrix_to_draw(), self.children[3].__get_matrix_to_draw())),
+                )
+            )
+
+    def draw_matrix(self):
+        fig, ax = plt.subplots(figsize=(16, 9))
+        ax.matshow(self.__get_matrix_to_draw(), cmap=ListedColormap(['w', 'k']))
+        plt.show()
 
 
 def split_matrix(M: np.ndarray):
@@ -62,13 +88,32 @@ def compress_matrix(M, r, epsilon):
     return node
 
 
-# xd = np.dot(U * Sigma, VT)
-# xd[np.isclose(xd, 0)] = 0
-# print(xd)
+def decompress(node):
+    if node.rank is not None:
+        if node.rank > 0:
+            return np.dot(node.U * node.Sigma, node.VT)
+        else:
+            return np.zeros((node.n, node.m))
+    elif node.matrix is not None:
+        return node.matrix
+    else:
+        return np.vstack(
+            (
+                np.hstack((decompress(node.children[0]), decompress(node.children[1]))),
+                np.hstack((decompress(node.children[2]), decompress(node.children[3]))),
+            )
+        )
 
 
-X = random_sparse(32, 32, density=0.1, random_state=0).todense()
+matrix = random_sparse(256, 256, density=0.01, random_state=0).todense()
 
-matrix_node = compress_matrix(X, 2, 1e-6)
+print(matrix)
+
+matrix_node = compress_matrix(matrix, 2, 1e-3)
 matrix_node.print_matrix()
+matrix_decompressed = decompress(matrix_node)
+# matrix_decompressed[np.isclose(matrix_decompressed, 0)] = 0
 
+print(np.allclose(matrix, matrix_decompressed))
+
+matrix_node.draw_matrix()
