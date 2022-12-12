@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.sparse.linalg import svds
-from scipy.sparse import random as random_sparse
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
@@ -91,7 +90,7 @@ def compress_matrix(M, r, epsilon):
 def decompress(node):
     if node.rank is not None:
         if node.rank > 0:
-            return np.dot(node.U * node.Sigma, node.VT)
+            return node.U * node.Sigma @ node.VT
         else:
             return np.zeros((node.n, node.m))
     elif node.matrix is not None:
@@ -104,16 +103,3 @@ def decompress(node):
             )
         )
 
-
-matrix = random_sparse(256, 256, density=0.01, random_state=0).todense()
-
-print(matrix)
-
-matrix_node = compress_matrix(matrix, 2, 1e-3)
-matrix_node.print_matrix()
-matrix_decompressed = decompress(matrix_node)
-# matrix_decompressed[np.isclose(matrix_decompressed, 0)] = 0
-
-print(np.allclose(matrix, matrix_decompressed))
-
-matrix_node.draw_matrix()
